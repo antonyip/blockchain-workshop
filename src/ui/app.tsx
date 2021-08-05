@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { PolyjuiceHttpProvider } from '@polyjuice-provider/web3';
 import { AddressTranslator } from 'nervos-godwoken-integration';
 
-import { SimpleStorageWrapper } from '../lib/contracts/SimpleStorageWrapper';
+import { TokenWrapper } from '../lib/contracts/TokenWrapper';
 import { CONFIG } from '../config';
 
 async function createWeb3() {
@@ -41,11 +41,17 @@ async function createWeb3() {
 
 export function App() {
     const [web3, setWeb3] = useState<Web3>(null);
-    const [contract, setContract] = useState<SimpleStorageWrapper>();
+    const [contract, setContract] = useState<TokenWrapper>();
     const [accounts, setAccounts] = useState<string[]>();
     const [l2Balance, setL2Balance] = useState<bigint>();
     const [existingContractIdInputValue, setExistingContractIdInputValue] = useState<string>();
+    const [addressOfBalance, setAddressOfBalance] = useState<string>();
     const [storedValue, setStoredValue] = useState<number | undefined>();
+    const [tokenName, setTokenName] = useState<string | undefined>();
+    const [tokenTotalSupply, setTokenTotalSupply] = useState<string | undefined>();
+    const [balanceOfAddress, setBalanceOfAddress] = useState<string | undefined>();
+    const [mintAddress, setMintAddress] = useState<string | undefined>();
+    const [mintAddressValue, setMintAddressValue] = useState<string | undefined>();
     const [deployTxHash, setDeployTxHash] = useState<string | undefined>();
     const [polyjuiceAddress, setPolyjuiceAddress] = useState<string | undefined>();
     const [transactionInProgress, setTransactionInProgress] = useState(false);
@@ -87,7 +93,7 @@ export function App() {
     const account = accounts?.[0];
 
     async function deployContract() {
-        const _contract = new SimpleStorageWrapper(web3);
+        const _contract = new TokenWrapper(web3);
 
         try {
             setDeployTxHash(undefined);
@@ -111,21 +117,108 @@ export function App() {
         }
     }
 
+    /*
     async function getStoredValue() {
         const value = await contract.getStoredValue(account);
         toast('Successfully read latest stored value.', { type: 'success' });
 
         setStoredValue(value);
     }
+    */
 
     async function setExistingContractAddress(contractAddress: string) {
-        const _contract = new SimpleStorageWrapper(web3);
+        const _contract = new TokenWrapper(web3);
         _contract.useDeployed(contractAddress.trim());
 
         setContract(_contract);
         setStoredValue(undefined);
     }
 
+    async function getTokenName()
+    {
+        try {
+            setTransactionInProgress(true);
+            const value = await contract.getTokenName();
+            setTokenName(value);
+            // toast(
+            //     'Successfully set latest stored value. You can refresh the read value now manually.',
+            //     { type: 'success' }
+            // );
+        } catch (error) {
+            console.error(error);
+            toast.error(
+                'There was an error sending your transaction. Please check developer console.'
+            );
+        } finally {
+            setTransactionInProgress(false);
+        }
+    }
+
+    async function getTokenTotalSupply()
+    {
+        try {
+            setTransactionInProgress(true);
+            const value = await contract.getTokenTotalSupply();
+            setTokenTotalSupply(value);
+            // toast(
+            //     'Successfully set latest stored value. You can refresh the read value now manually.',
+            //     { type: 'success' }
+            // );
+        } catch (error) {
+            console.error(error);
+            toast.error(
+                'There was an error sending your transaction. Please check developer console.'
+            );
+        } finally {
+            setTransactionInProgress(false);
+        }
+    }
+
+    
+
+    async function getBalanceOfAddress()
+    {
+        try {
+            setTransactionInProgress(true);
+            const value = await contract.getBalanceOfAddress(addressOfBalance);
+            setBalanceOfAddress(value);
+            // toast(
+            //     'Successfully set latest stored value. You can refresh the read value now manually.',
+            //     { type: 'success' }
+            // );
+        } catch (error) {
+            console.error(error);
+            toast.error(
+                'There was an error sending your transaction. Please check developer console.'
+            );
+        } finally {
+            setTransactionInProgress(false);
+        }
+    }
+
+    async function MintTokens()
+    {
+        try {
+            setTransactionInProgress(true);
+            await contract.MintTokens(mintAddress,mintAddressValue);
+            //setBalanceOfAddress(value);
+            // toast(
+            //     'Successfully set latest stored value. You can refresh the read value now manually.',
+            //     { type: 'success' }
+            // );
+        } catch (error) {
+            console.error(error);
+            toast.error(
+                'There was an error sending your transaction. Please check developer console.'
+            );
+        } finally {
+            setTransactionInProgress(false);
+        }
+    }
+    
+
+    
+/*
     async function setNewStoredValue() {
         try {
             setTransactionInProgress(true);
@@ -143,7 +236,7 @@ export function App() {
             setTransactionInProgress(false);
         }
     }
-
+*/
     useEffect(() => {
         if (web3) {
             return;
@@ -183,11 +276,10 @@ export function App() {
             <br />
             <hr />
             <p>
-                The button below will deploy a SimpleStorage smart contract where you can store a
-                number value. By default the initial stored value is equal to 123 (you can change
-                that in the Solidity smart contract). After the contract is deployed you can either
-                read stored value from smart contract or set a new one. You can do that using the
-                interface below.
+                The button below will deploy a ERC20 smart contract where you
+                can execute standard ERC20 reads and writes.
+                After the contract is deployed you can have fun with it.
+                You can do that using the interface below.
             </p>
             <button onClick={deployContract} disabled={!l2Balance}>
                 Deploy contract
@@ -196,6 +288,7 @@ export function App() {
             <input
                 placeholder="Existing contract id"
                 onChange={e => setExistingContractIdInputValue(e.target.value)}
+                defaultValue="0xaC65D2f9Ec9057Ed3bf5A075C4df29b323564577"
             />
             <button
                 disabled={!existingContractIdInputValue || !l2Balance}
@@ -205,18 +298,38 @@ export function App() {
             </button>
             <br />
             <br />
-            <button onClick={getStoredValue} disabled={!contract}>
-                Get stored value
+            <button onClick={getTokenName} disabled={!contract}>
+                Get Token Name
             </button>
-            {storedValue ? <>&nbsp;&nbsp;Stored value: {storedValue.toString()}</> : null}
+            {tokenName ? <>&nbsp;&nbsp;Token Name: {tokenName.toString()}</> : null}
+            <br />
+            <br />
+            <button onClick={getTokenTotalSupply} disabled={!contract}>
+                Get Token Total Supply
+            </button>
+            {tokenTotalSupply ? <>&nbsp;&nbsp;Token Supply: {tokenTotalSupply.toString()}</> : null}
             <br />
             <br />
             <input
-                type="number"
-                onChange={e => setNewStoredNumberInputValue(parseInt(e.target.value, 10))}
+                placeholder="Address"
+                onChange={e => setAddressOfBalance(e.target.value)}
             />
-            <button onClick={setNewStoredValue} disabled={!contract}>
-                Set new stored value
+            <button onClick={getBalanceOfAddress} disabled={!contract}>
+                Get Token Balance Of Address
+            </button>
+            {balanceOfAddress ? <>&nbsp;&nbsp;Balance: {balanceOfAddress.toString()}</> : null}
+            <br />
+            <br />
+            <input
+                placeholder="Address"
+                onChange={e => setMintAddress(e.target.value)}
+            />
+            <input
+                placeholder="Amount"
+                onChange={e => setMintAddressValue(e.target.value)}
+            />
+            <button onClick={MintTokens} disabled={!contract}>
+                MintTokens to Address
             </button>
             <br />
             <br />
