@@ -38,7 +38,7 @@ export class TokenWrapper {
     }
 
     async MintTokens(address: string, value: string) {
-        const data = await this.contract.methods.mint(address, value).call();
+        const data = await this.contract.methods.mint(address, value).send();
         return data;
     }
 
